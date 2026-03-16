@@ -2,24 +2,37 @@ import os
 import json
 import subprocess
 import time
+import shutil
 from datetime import datetime
 import zoneinfo
 
 BASE = "/timelapse"
 CONFIG_PATH = "/config/settings.json"
+DEFAULTS_PATH = "/defaults/settings.json"
 
 DEFAULT_CONFIG = {
     "delete_frames_after_stitch": False,
     "default_fps": 30,
     "scan_interval_seconds": 10,
     "output_format": "mp4",
-    "timezone": None  # e.g. "America/Chicago"
+    "timezone": None
 }
 
 
-def load_config():
+def ensure_settings_file():
+    """Copy default settings.json into /config if missing."""
     if not os.path.exists(CONFIG_PATH):
-        print(f"[config] No settings.json found at {CONFIG_PATH}, using defaults")
+        print("[config] No settings.json found, copying defaults...")
+        try:
+            shutil.copy(DEFAULTS_PATH, CONFIG_PATH)
+        except Exception as e:
+            print(f"[config] Failed to copy default settings.json: {e}")
+
+
+def load_config():
+    """Load settings.json with fallback to defaults."""
+    if not os.path.exists(CONFIG_PATH):
+        print("[config] settings.json missing, using defaults")
         return DEFAULT_CONFIG.copy()
 
     try:
@@ -34,6 +47,7 @@ def load_config():
 
 
 def resolve_timezone(config):
+    """Resolve timezone from config or system."""
     tz_name = config.get("timezone")
     if tz_name:
         try:
@@ -42,7 +56,7 @@ def resolve_timezone(config):
             print(f"[time] Invalid timezone '{tz_name}', falling back to UTC: {e}")
             return zoneinfo.ZoneInfo("UTC")
 
-    # Fallback: try system timezone
+    # Fallback: system timezone
     try:
         with open("/etc/timezone") as f:
             sys_tz_name = f.read().strip()
@@ -53,12 +67,13 @@ def resolve_timezone(config):
 
 
 def build_output_filename(meta, config, tz):
+    """Build deterministic output filename."""
     base = meta.get("file_name") or meta.get("job_id") or "timelapse"
 
     try:
         dt_utc = datetime.fromisoformat(meta["time_completed"].replace("Z", "+00:00"))
         dt_local = dt_utc.astimezone(tz)
-        timestamp = dt_local.strftime("%Y%m%d-%I%M%S%p")  # 12-hour with AM/PM
+        timestamp = dt_local.strftime("%Y%m%d-%I%M%S%p")  # 12-hour format
     except Exception as e:
         print(f"[naming] Failed to parse time_completed, using 'unknown': {e}")
         timestamp = "unknown"
@@ -68,7 +83,7 @@ def build_output_filename(meta, config, tz):
 
 
 def compute_fps(config):
-    # Timelapse: FPS is a presentation choice, not derived from metadata
+    """Timelapse FPS is always from config, never metadata."""
     return config["default_fps"]
 
 
@@ -139,7 +154,9 @@ def scan_all(config, tz):
 
 
 if __name__ == "__main__":
+    ensure_settings_file()
     print("[worker] Timelapse worker started. Watching for completed jobs...")
+
     while True:
         config = load_config()
         tz = resolve_timezone(config)
