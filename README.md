@@ -57,7 +57,7 @@ A timelapse.json file indicating the job has been processed
 
 Example output filename:
 
-debug_job_1773688647_20260316-021730PM_timelapse.mp4
+Sample_File_1773688647_20260316-021730PM_timelapse.mp4
 
 # Docker Usage (Unraid or CLI)
 Mount two volumes:
