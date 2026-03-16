@@ -147,11 +147,16 @@ def scan_all(config, tz):
         print(f"[scan] Base path does not exist: {BASE}")
         return
 
-    for folder in os.listdir(BASE):
-        job_path = os.path.join(BASE, folder)
-        if os.path.isdir(job_path):
-            process_job(job_path, config, tz)
-
+    for printer in os.listdir(BASE):
+        printer_path = os.path.join(BASE, printer)
+        if not os.path.isdir(printer_path):
+            continue
+    
+        for job in os.listdir(printer_path):
+            job_path = os.path.join(printer_path, job)
+            if os.path.isdir(job_path):
+                process_job(job_path, config, tz)
+                
 
 if __name__ == "__main__":
     ensure_settings_file()
