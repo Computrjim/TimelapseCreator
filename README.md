@@ -22,13 +22,14 @@ Writes a timelapse.json file to mark jobs as processed
 Zero external dependencies beyond ffmpeg
 
 # Folder Structure
-/timelapse/
-    <printer_id>/
-        <job_id>/
-            metadata.json
-            layer_0001.jpg
-            layer_0002.jpg
-            ...
+    /timelapse/
+        <printer_id>/
+            <job_id>/
+                metadata.json
+                layer_0001.jpg
+                layer_0002.jpg
+                ...
+
 
 
 # Configuration
