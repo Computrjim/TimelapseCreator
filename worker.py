@@ -9,6 +9,7 @@ import zoneinfo
 BASE = "/timelapse"
 CONFIG_PATH = "/config/settings.json"
 DEFAULTS_PATH = "/defaults/settings.json"
+DONE_FILE = "timelapse.json"
 
 DEFAULT_CONFIG = {
     "delete_frames_after_stitch": False,
@@ -87,7 +88,28 @@ def compute_fps(config):
     return config["default_fps"]
 
 
+def write_done_file(job_path, output_name, tz):
+    """Write timelapse.json to mark job as processed."""
+    done_path = os.path.join(job_path, DONE_FILE)
+    data = {
+        "timelapse_created": True,
+        "output_file": output_name,
+        "created_at": datetime.now(tz).isoformat(),
+        "worker_version": "1.0.0"
+    }
+    try:
+        with open(done_path, "w") as f:
+            json.dump(data, f, indent=2)
+        print(f"[done] Wrote {DONE_FILE}")
+    except Exception as e:
+        print(f"[done] Failed to write {DONE_FILE}: {e}")
+
+
 def process_job(job_path, config, tz):
+    # Skip if already processed
+    if os.path.exists(os.path.join(job_path, DONE_FILE)):
+        return
+
     metadata_path = os.path.join(job_path, "metadata.json")
     if not os.path.exists(metadata_path):
         return
@@ -104,10 +126,6 @@ def process_job(job_path, config, tz):
 
     output_name = build_output_filename(meta, config, tz)
     output_file = os.path.join(job_path, output_name)
-
-    if os.path.exists(output_file):
-        print(f"[job] Output already exists, skipping: {output_file}")
-        return
 
     fps = compute_fps(config)
     print(f"[job] Stitching timelapse for {job_path} at {fps} fps -> {output_file}")
@@ -139,6 +157,7 @@ def process_job(job_path, config, tz):
                     print(f"[cleanup] Failed to delete {f}: {e}")
         print(f"[cleanup] Deleted {deleted} frame images in {job_path}")
 
+    write_done_file(job_path, output_name, tz)
     print(f"[job] Completed timelapse: {output_file}")
 
 
@@ -151,12 +170,12 @@ def scan_all(config, tz):
         printer_path = os.path.join(BASE, printer)
         if not os.path.isdir(printer_path):
             continue
-    
+
         for job in os.listdir(printer_path):
             job_path = os.path.join(printer_path, job)
             if os.path.isdir(job_path):
                 process_job(job_path, config, tz)
-                
+
 
 if __name__ == "__main__":
     ensure_settings_file()
