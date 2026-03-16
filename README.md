@@ -1,5 +1,3 @@
-# TimelapseCreator
-
 # Timelapse Worker for 3D Printer Frames
 
 This container scans a `/timelapse` directory for completed 3D printer jobs,
