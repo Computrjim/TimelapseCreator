@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-# Install ffmpeg
+# Install ffmpeg + tzdata
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg tzdata && \
     apt-get clean && \
@@ -8,11 +8,13 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# No external Python deps right now; everything is stdlib + ffmpeg
+# Copy worker
 COPY worker.py .
 
-# Create mount points (for clarity)
+# Copy default settings
+COPY defaults/settings.json /defaults/settings.json
+
+# Create mount points
 RUN mkdir -p /timelapse /config
 
-# Default command
 CMD ["python", "worker.py"]
