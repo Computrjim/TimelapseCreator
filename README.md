@@ -23,11 +23,13 @@ Zero external dependencies beyond ffmpeg
 
 # Folder Structure
 /timelapse/
-<job_id>/
-metadata.json
-layer_0001.jpg
-layer_0002.jpg
-...
+    <printer_id>/
+        <job_id>/
+            metadata.json
+            layer_0001.jpg
+            layer_0002.jpg
+            ...
+
 
 # Configuration
 A default settings.json is copied into /config on first run:
