@@ -35,13 +35,16 @@ Zero external dependencies beyond ffmpeg
 # Configuration
 A default settings.json is copied into /config on first run:
 
+```json
 {
-"delete_frames_after_stitch": false,
-"default_fps": 30,
-"scan_interval_seconds": 10,
-"output_format": "mp4",
-"timezone": "America/Chicago"
+  "delete_frames_after_stitch": false,
+  "default_fps": 30,
+  "scan_interval_seconds": 10,
+  "output_format": "mp4",
+  "timezone": "America/Chicago"
 }
+```
+
 
 You may edit this file at any time.
 
