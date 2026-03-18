@@ -19,6 +19,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Extract version from worker.py
+        id: get_version
+        run: |
+          VERSION=$(grep -oP 'WORKER_VERSION\s*=\s*"\K[^"]+' worker.py)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -34,3 +40,4 @@ jobs:
           tags: |
             ghcr.io/computrjim/timelapse-worker:latest
             ghcr.io/computrjim/timelapse-worker:${{ github.sha }}
+            ghcr.io/computrjim/timelapse-worker:${{ steps.get_version.outputs.version }}
