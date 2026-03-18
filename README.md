@@ -4,34 +4,34 @@ This container scans a /timelapse directory for completed 3D printer jobs, detec
 The worker is designed for Unraid, but runs on any 64‑bit Linux system.
 
 # Features
-Automatically detects completed print jobs
+- Automatically detects completed print jobs
 
-Supports multiple timelapse modes per job
+- Supports multiple timelapse modes per job
 
-Layer‑based
+- Layer‑based
 
-Interval‑based
+  * Interval‑based
 
-Every‑N‑layers
+  * Every‑N‑layers
 
-Any future mode your engine emits
+  * Any future mode your engine emits
 
-Uses each mode’s filename pattern (e.g., layer_%04d.jpg, interval_%09d.jpg)
+- Uses each mode’s filename pattern (e.g., layer_%04d.jpg, interval_%09d.jpg)
 
-Produces one output video per mode
+- Produces one output video per mode
 
-Deterministic filename format:
-<file_name>_<YYYYMMDD-HHMMSSAM/PM>_<mode>_timelapse.mp4
+- Deterministic filename format:
+  <file_name>_<YYYYMMDD-HHMMSSAM/PM>_<mode>_timelapse.mp4
 
-Timezone conversion with 12‑hour timestamps
+- Timezone conversion with 12‑hour timestamps
 
-Optional deletion of frame images after stitching
+- Optional deletion of frame images after stitching
 
-Auto‑generated settings.json on first run
+- Auto‑generated settings.json on first run
 
-Writes a timelapse.json file listing all generated outputs
+- Writes a timelapse.json file listing all generated outputs
 
-Zero external dependencies beyond ffmpeg
+- Zero external dependencies beyond ffmpeg
 
 # Folder Structure
 The worker expects the following directory layout:
@@ -108,9 +108,9 @@ You may edit this file at any time.
 # Output
 Each completed job produces:
 
-One timelapse video per mode
+- One timelapse video per mode
 
-A timelapse.json file describing all outputs
+- A timelapse.json file describing all outputs
 
 Example output filenames:
 
@@ -148,9 +148,9 @@ Example timelapse.json (use fenced code block syntax):
 # Docker Usage (Unraid or CLI)
 Mount two volumes:
 
-/timelapse → your printer timelapse folder
+- /timelapse → your printer timelapse folder
 
-/config → persistent settings
+- /config → persistent settings
 
 Example:
 
