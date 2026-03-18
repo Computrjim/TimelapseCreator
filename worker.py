@@ -11,6 +11,8 @@ CONFIG_PATH = "/config/settings.json"
 DEFAULTS_PATH = "/defaults/settings.json"
 DONE_FILE = "timelapse.json"
 
+WORKER_VERSION = "1.1.0"
+
 DEFAULT_CONFIG = {
     "delete_frames_after_stitch": False,
     "default_fps": 30,
@@ -67,35 +69,36 @@ def resolve_timezone(config):
         return zoneinfo.ZoneInfo("UTC")
 
 
-def build_output_filename(meta, config, tz):
-    """Build deterministic output filename."""
+def build_output_filename(meta, mode, config, tz):
+    """Build deterministic output filename per mode."""
     base = meta.get("file_name") or meta.get("job_id") or "timelapse"
 
     try:
         dt_utc = datetime.fromisoformat(meta["time_completed"].replace("Z", "+00:00"))
         dt_local = dt_utc.astimezone(tz)
-        timestamp = dt_local.strftime("%Y%m%d-%I%M%S%p")  # 12-hour format
+        timestamp = dt_local.strftime("%Y%m%d-%I%M%S%p")
     except Exception as e:
         print(f"[naming] Failed to parse time_completed, using 'unknown': {e}")
         timestamp = "unknown"
 
     ext = config["output_format"]
-    return f"{base}_{timestamp}_timelapse.{ext}"
+    mode_type = mode.get("type", "unknown")
+
+    return f"{base}_{timestamp}_{mode_type}_timelapse.{ext}"
 
 
 def compute_fps(config):
-    """Timelapse FPS is always from config, never metadata."""
     return config["default_fps"]
 
 
-def write_done_file(job_path, output_name, tz):
+def write_done_file(job_path, outputs, tz):
     """Write timelapse.json to mark job as processed."""
     done_path = os.path.join(job_path, DONE_FILE)
     data = {
         "timelapse_created": True,
-        "output_file": output_name,
+        "outputs": outputs,
         "created_at": datetime.now(tz).isoformat(),
-        "worker_version": "1.0.0"
+        "worker_version": WORKER_VERSION
     }
     try:
         with open(done_path, "w") as f:
@@ -103,6 +106,43 @@ def write_done_file(job_path, output_name, tz):
         print(f"[done] Wrote {DONE_FILE}")
     except Exception as e:
         print(f"[done] Failed to write {DONE_FILE}: {e}")
+
+
+def stitch_mode(job_path, mode, meta, config, tz):
+    """Stitch a single timelapse mode."""
+    pattern = mode.get("pattern")
+    if not pattern:
+        print(f"[mode] Missing pattern in mode: {mode}")
+        return None
+
+    output_name = build_output_filename(meta, mode, config, tz)
+    output_file = os.path.join(job_path, output_name)
+
+    fps = compute_fps(config)
+
+    print(f"[mode] Stitching mode '{mode.get('type')}' using pattern '{pattern}'")
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-framerate", str(fps),
+        "-i", os.path.join(job_path, pattern),
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        output_file,
+    ]
+
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"[ffmpeg] Failed for mode {mode.get('type')}: {e}")
+        return None
+
+    return {
+        "type": mode.get("type"),
+        "pattern": pattern,
+        "output_file": output_name
+    }
 
 
 def process_job(job_path, config, tz):
@@ -124,32 +164,28 @@ def process_job(job_path, config, tz):
     if meta.get("status") != "completed":
         return
 
-    output_name = build_output_filename(meta, config, tz)
-    output_file = os.path.join(job_path, output_name)
+    modes = meta.get("timelapse", {}).get("modes", [])
+    if not modes:
+        print(f"[job] No timelapse modes found in {job_path}")
+        return
 
-    fps = compute_fps(config)
-    print(f"[job] Stitching timelapse for {job_path} at {fps} fps -> {output_file}")
+    print(f"[job] Processing {len(modes)} timelapse modes for job {job_path}")
 
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-framerate", str(fps),
-        "-i", os.path.join(job_path, "layer_%04d.jpg"),
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        output_file,
-    ]
+    outputs = []
 
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"[ffmpeg] Failed for {job_path}: {e}")
+    for mode in modes:
+        result = stitch_mode(job_path, mode, meta, config, tz)
+        if result:
+            outputs.append(result)
+
+    if not outputs:
+        print(f"[job] No outputs created for {job_path}")
         return
 
     if config["delete_frames_after_stitch"]:
         deleted = 0
         for f in os.listdir(job_path):
-            if f.startswith("layer_") and f.endswith(".jpg"):
+            if f.endswith(".jpg"):
                 try:
                     os.remove(os.path.join(job_path, f))
                     deleted += 1
@@ -157,8 +193,8 @@ def process_job(job_path, config, tz):
                     print(f"[cleanup] Failed to delete {f}: {e}")
         print(f"[cleanup] Deleted {deleted} frame images in {job_path}")
 
-    write_done_file(job_path, output_name, tz)
-    print(f"[job] Completed timelapse: {output_file}")
+    write_done_file(job_path, outputs, tz)
+    print(f"[job] Completed all timelapse modes for {job_path}")
 
 
 def scan_all(config, tz):
@@ -179,7 +215,7 @@ def scan_all(config, tz):
 
 if __name__ == "__main__":
     ensure_settings_file()
-    print("[worker] Timelapse worker started. Watching for completed jobs...")
+    print(f"[worker] Timelapse worker v{WORKER_VERSION} started. Watching for completed jobs...")
 
     while True:
         config = load_config()
