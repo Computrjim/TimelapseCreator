@@ -1,7 +1,7 @@
 {
-  "delete_frames_after_stitch": false,
+  "delete_frames_after_stitch": true,
   "default_fps": 30,
-  "scan_interval_seconds": 10,
+  "scan_interval_seconds": 60,
   "output_format": "mp4",
   "timezone": "America/Chicago"
 }
